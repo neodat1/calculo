@@ -7,72 +7,115 @@
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      margin: 40px;
-      background-color: #f9f9f9;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      margin: 0;
+      padding: 40px;
     }
-    h2, h3 {
-      color: #1a1a1a;
+    h2 {
+      text-align: center;
+      color: #2c3e50;
     }
-    input, button {
-      padding: 8px;
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: #fff;
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    label, input, button {
       font-size: 16px;
+    }
+    input {
+      padding: 8px 12px;
+      width: 300px;
       margin-right: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      padding: 8px 16px;
+      background-color: #3498db;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    .resultado {
+      margin-top: 25px;
+      padding: 20px;
+      background-color: #ecf0f1;
+      border-left: 4px solid #2980b9;
+      border-radius: 6px;
+    }
+    .grafica {
+      margin-top: 30px;
     }
     table {
-      border-collapse: collapse;
       margin-top: 20px;
-      width: 400px;
+      border-collapse: collapse;
+      width: 100%;
+      background-color: #fafafa;
     }
     th, td {
-      border: 1px solid #ccc;
-      padding: 6px 10px;
+      border: 1px solid #ddd;
+      padding: 8px 12px;
       text-align: center;
     }
     th {
-      background-color: #eee;
+      background-color: #2980b9;
+      color: white;
     }
-    .section {
+    .explicacion {
       margin-top: 30px;
+      padding: 20px;
+      background-color: #fefefe;
+      border-left: 4px solid #95a5a6;
+      border-radius: 6px;
     }
   </style>
 </head>
 <body>
-  <h2>Calculadora de Dominio y Rango</h2>
+  <div class="container">
+    <h2>Calculadora de Dominio y Rango</h2>
 
-  <label>Ingrese una función en términos de <code>x</code>:</label>
-  <input type="text" id="funcion" placeholder="Ej: 1/(x-2), sqrt(x), x^2 + 3">
-  <button onclick="calcular()">Calcular</button>
+    <label for="funcion">Ingrese una función en términos de <code>x</code>:</label><br><br>
+    <input type="text" id="funcion" placeholder="Ej: 1/(x-2), sqrt(x), x^2 + 3">
+    <button onclick="calcular()">Calcular</button>
 
-  <div class="section">
-    <h3>Resultado</h3>
-    <p><strong>Dominio:</strong> <span id="dominio"></span></p>
-    <p><strong>Rango:</strong> <span id="rango"></span></p>
-  </div>
+    <div class="resultado">
+      <p><strong>Dominio:</strong> <span id="dominio"></span></p>
+      <p><strong>Rango:</strong> <span id="rango"></span></p>
+    </div>
 
-  <div class="section">
-    <div id="grafica" style="width: 700px; height: 500px;"></div>
-  </div>
+    <div class="grafica">
+      <div id="grafica" style="width: 100%; height: 500px;"></div>
+    </div>
 
-  <div class="section">
-    <h3>Fragmento de tabla de valores (x, f(x))</h3>
-    <table id="tabla">
-      <thead>
-        <tr><th>x</th><th>f(x)</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
+    <div class="grafica">
+      <h3>Fragmento de tabla de valores (x, f(x))</h3>
+      <table id="tabla">
+        <thead><tr><th>x</th><th>f(x)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
 
-  <div class="section">
-    <h3>Explicación</h3>
-    <p>Esta herramienta analiza el comportamiento de la función evaluando valores de <code>x</code> entre -100 y 100, en pasos de 0.1.</p>
-    <ul>
-      <li>Se excluyen automáticamente los puntos donde la función no está definida.</li>
-      <li>Se muestran las discontinuidades como <strong>asíntotas verticales</strong> (líneas rojas punteadas).</li>
-      <li>El dominio estimado considera los valores donde la función existe y produce resultados numéricos válidos.</li>
-      <li>El rango se determina a partir de los valores válidos de f(x), sin considerar infinitos.</li>
-    </ul>
+    <div class="explicacion">
+      <h3>Explicación</h3>
+      <p>Esta herramienta evalúa la función dentro del intervalo <code>x ∈ [-100, 100]</code>, omitiendo los puntos donde la función no está definida (por ejemplo, divisiones por cero o raíces de números negativos).</p>
+      <ul>
+        <li><strong>Dominio:</strong> Es el conjunto de todos los valores válidos de <code>x</code>. Se excluyen automáticamente los puntos donde la función no existe matemáticamente.</li>
+        <li id="dom-exp"></li>
+        <li><strong>Rango:</strong> Es el conjunto de todos los valores posibles de <code>f(x)</code> para los <code>x</code> válidos.</li>
+        <li id="ran-exp"></li>
+        <li><strong>Asíntotas verticales:</strong> Se muestran como líneas rojas punteadas en la gráfica cuando hay divisiones por cero (discontinuidades).</li>
+      </ul>
+    </div>
   </div>
 
   <script>
@@ -122,7 +165,6 @@
         segmentos.push({ x: [...xSegmento], y: [...ySegmento] });
       }
 
-      // Mostrar dominio y rango
       document.getElementById("dominio").innerText =
         `Aproximadamente: [${domMin.toFixed(2)}, ${domMax.toFixed(2)}]` +
         (discontinuidades.length ? ` con discontinuidades en x = ${discontinuidades.join(", ")}` : "");
@@ -130,7 +172,6 @@
       document.getElementById("rango").innerText =
         `Aproximadamente: [${ranMin.toFixed(2)}, ${ranMax.toFixed(2)}]`;
 
-      // Mostrar tabla
       const cuerpo = document.querySelector("#tabla tbody");
       cuerpo.innerHTML = '';
       tablaDatos.forEach(par => {
@@ -139,17 +180,15 @@
         cuerpo.appendChild(fila);
       });
 
-      // Graficar
       const trazos = segmentos.map(seg => ({
         x: seg.x,
         y: seg.y,
         mode: 'lines',
         type: 'scatter',
-        line: { color: 'blue', width: 2 },
+        line: { color: '#2980b9', width: 2 },
         hoverinfo: 'x+y'
       }));
 
-      // Asíntotas verticales
       discontinuidades.forEach(xVal => {
         trazos.push({
           x: [xVal, xVal],
@@ -168,6 +207,22 @@
         yaxis: { title: 'f(x)', range: [ranMin - 1, ranMax + 1] },
         margin: { t: 50 }
       });
+
+      // Explicación del dominio excluido
+      const domExp = document.getElementById("dom-exp");
+      if (discontinuidades.length > 0) {
+        domExp.innerHTML = `<em>Valores excluidos del dominio:</em> x = ${discontinuidades.join(", ")}.`;
+      } else {
+        domExp.innerHTML = `<em>No se detectaron valores excluidos del dominio dentro del intervalo.</em>`;
+      }
+
+      // Explicación del rango
+      const ranExp = document.getElementById("ran-exp");
+      if (ranMax - ranMin < 1e-4) {
+        ranExp.innerHTML = `<em>La función parece constante en el intervalo evaluado.</em>`;
+      } else {
+        ranExp.innerHTML = `<em>Rango estimado dentro del intervalo. No se detectaron exclusiones específicas, aunque podrían existir según la función.</em>`;
+      }
     }
   </script>
 </body>
