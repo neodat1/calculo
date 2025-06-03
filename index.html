@@ -5,29 +5,75 @@
   <title>Calculadora de Dominio y Rango</title>
   <script src="https://cdn.jsdelivr.net/npm/mathjs@11.11.1/lib/browser/math.js"></script>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background-color: #f9f9f9;
+    }
+    h2, h3 {
+      color: #1a1a1a;
+    }
+    input, button {
+      padding: 8px;
+      font-size: 16px;
+      margin-right: 10px;
+    }
+    table {
+      border-collapse: collapse;
+      margin-top: 20px;
+      width: 400px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 6px 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #eee;
+    }
+    .section {
+      margin-top: 30px;
+    }
+  </style>
 </head>
 <body>
   <h2>Calculadora de Dominio y Rango</h2>
-  <p>Ingrese una función en términos de <code>x</code>:</p>
+
+  <label>Ingrese una función en términos de <code>x</code>:</label>
   <input type="text" id="funcion" placeholder="Ej: 1/(x-2), sqrt(x), x^2 + 3">
   <button onclick="calcular()">Calcular</button>
 
-  <h3>Resultado:</h3>
-  <p><strong>Dominio:</strong> <span id="dominio"></span></p>
-  <p><strong>Rango:</strong> <span id="rango"></span></p>
+  <div class="section">
+    <h3>Resultado</h3>
+    <p><strong>Dominio:</strong> <span id="dominio"></span></p>
+    <p><strong>Rango:</strong> <span id="rango"></span></p>
+  </div>
 
-  <div id="grafica" style="width: 700px; height: 500px;"></div>
+  <div class="section">
+    <div id="grafica" style="width: 700px; height: 500px;"></div>
+  </div>
 
-  <h3>Explicación</h3>
-  <p>
-    Esta herramienta estima el dominio y el rango de una función evaluando muchos valores de <code>x</code> entre -100 y 100. Si un valor lanza error o produce un número no finito (como <code>1/0</code>), se excluye automáticamente.
-    Además:
-  </p>
-  <ul>
-    <li>Se evita graficar saltos sobre asíntotas verticales.</li>
-    <li>Se indican visualmente las asíntotas verticales detectadas.</li>
-    <li>Se aproxima el rango con los valores de salida válidos.</li>
-  </ul>
+  <div class="section">
+    <h3>Fragmento de tabla de valores (x, f(x))</h3>
+    <table id="tabla">
+      <thead>
+        <tr><th>x</th><th>f(x)</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h3>Explicación</h3>
+    <p>Esta herramienta analiza el comportamiento de la función evaluando valores de <code>x</code> entre -100 y 100, en pasos de 0.1.</p>
+    <ul>
+      <li>Se excluyen automáticamente los puntos donde la función no está definida.</li>
+      <li>Se muestran las discontinuidades como <strong>asíntotas verticales</strong> (líneas rojas punteadas).</li>
+      <li>El dominio estimado considera los valores donde la función existe y produce resultados numéricos válidos.</li>
+      <li>El rango se determina a partir de los valores válidos de f(x), sin considerar infinitos.</li>
+    </ul>
+  </div>
 
   <script>
     function calcular() {
@@ -35,24 +81,19 @@
       const expr = math.parse(input);
       const f = expr.compile();
 
-      const xIntervalo = 0.1;
-      const xDesde = -100;
-      const xHasta = 100;
+      const xDesde = -100, xHasta = 100, paso = 0.1;
 
-      const segmentos = []; // para dividir en trazos continuos
-      let xSegmento = [];
-      let ySegmento = [];
+      const segmentos = [];
+      let xSegmento = [], ySegmento = [];
 
+      const tablaDatos = [];
       let discontinuidades = [];
+      let domMin = null, domMax = null, ranMin = null, ranMax = null;
 
-      let domMin = null;
-      let domMax = null;
-      let ranMin = null;
-      let ranMax = null;
-
-      for (let x = xDesde; x <= xHasta; x += xIntervalo) {
+      for (let x = xDesde; x <= xHasta; x += paso) {
+        let y;
         try {
-          const y = f.evaluate({ x: x });
+          y = f.evaluate({ x: x });
           if (!isFinite(y) || Math.abs(y) > 1e6) throw 'infinito';
 
           if (domMin === null || x < domMin) domMin = x;
@@ -62,6 +103,11 @@
 
           xSegmento.push(x);
           ySegmento.push(y);
+
+          if (tablaDatos.length < 20 && Math.abs(x % 1) < 0.001) {
+            tablaDatos.push({ x: x.toFixed(2), y: y.toFixed(4) });
+          }
+
         } catch {
           if (xSegmento.length > 1) {
             segmentos.push({ x: [...xSegmento], y: [...ySegmento] });
@@ -84,23 +130,35 @@
       document.getElementById("rango").innerText =
         `Aproximadamente: [${ranMin.toFixed(2)}, ${ranMax.toFixed(2)}]`;
 
-      // Preparar trazos de gráfica
+      // Mostrar tabla
+      const cuerpo = document.querySelector("#tabla tbody");
+      cuerpo.innerHTML = '';
+      tablaDatos.forEach(par => {
+        const fila = document.createElement("tr");
+        fila.innerHTML = `<td>${par.x}</td><td>${par.y}</td>`;
+        cuerpo.appendChild(fila);
+      });
+
+      // Graficar
       const trazos = segmentos.map(seg => ({
         x: seg.x,
         y: seg.y,
         mode: 'lines',
         type: 'scatter',
-        line: { color: 'blue' }
+        line: { color: 'blue', width: 2 },
+        hoverinfo: 'x+y'
       }));
 
-      // Añadir asíntotas verticales detectadas
+      // Asíntotas verticales
       discontinuidades.forEach(xVal => {
         trazos.push({
           x: [xVal, xVal],
           y: [ranMin - 1, ranMax + 1],
           mode: 'lines',
-          line: { dash: 'dot', color: 'red' },
-          name: 'Asíntota vertical'
+          line: { dash: 'dot', color: 'red', width: 1.5 },
+          name: 'Asíntota vertical',
+          hoverinfo: 'none',
+          showlegend: false
         });
       });
 
@@ -108,7 +166,7 @@
         title: 'Gráfica de la Función',
         xaxis: { title: 'x' },
         yaxis: { title: 'f(x)', range: [ranMin - 1, ranMax + 1] },
-        showlegend: false
+        margin: { t: 50 }
       });
     }
   </script>
