@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Calculadora de Dominio y Rango</title>
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@11.11.1/lib/browser/math.js"></script>
+</head>
+<body>
+  <h2>Calculadora de Dominio y Rango</h2>
+  <p>Ingrese una función en términos de <code>x</code>:</p>
+  <input type="text" id="funcion" placeholder="Ej: 1/(x-2), sqrt(x), x^2 + 3">
+  <button onclick="calcular()">Calcular</button>
+
+  <h3>Resultado:</h3>
+  <p><strong>Dominio:</strong> <span id="dominio"></span></p>
+  <p><strong>Rango:</strong> <span id="rango"></span></p>
+
+  <script>
+    function calcular() {
+      const input = document.getElementById("funcion").value;
+      const expr = math.parse(input);
+      const f = expr.compile();
+      let dominio = [];
+      let rango = [];
+
+      for (let x = -100; x <= 100; x += 0.1) {
+        try {
+          const y = f.evaluate({ x: x });
+          if (typeof y === "number" && isFinite(y)) {
+            dominio.push(x);
+            rango.push(y);
+          }
+        } catch (e) {
+          // valores que causan error no se incluyen en el dominio
+        }
+      }
+
+      if (dominio.length === 0) {
+        document.getElementById("dominio").innerText = "No definido o no reconocible.";
+        document.getElementById("rango").innerText = "No definido o no reconocible.";
+        return;
+      }
+
+      const domMin = Math.min(...dominio).toFixed(2);
+      const domMax = Math.max(...dominio).toFixed(2);
+      const ranMin = Math.min(...rango).toFixed(2);
+      const ranMax = Math.max(...rango).toFixed(2);
+
+      document.getElementById("dominio").innerText = `Aproximadamente: [${domMin}, ${domMax}]`;
+      document.getElementById("rango").innerText = `Aproximadamente: [${ranMin}, ${ranMax}]`;
+    }
+  </script>
+</body>
+</html>
