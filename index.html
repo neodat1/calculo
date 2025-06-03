@@ -16,63 +16,100 @@
   <p><strong>Dominio:</strong> <span id="dominio"></span></p>
   <p><strong>Rango:</strong> <span id="rango"></span></p>
 
-  <div id="grafica" style="width: 600px; height: 400px;"></div>
+  <div id="grafica" style="width: 700px; height: 500px;"></div>
+
+  <h3>Explicación</h3>
+  <p>
+    Esta herramienta estima el dominio y el rango de una función evaluando muchos valores de <code>x</code> entre -100 y 100. Si un valor lanza error o produce un número no finito (como <code>1/0</code>), se excluye automáticamente.
+    Además:
+  </p>
+  <ul>
+    <li>Se evita graficar saltos sobre asíntotas verticales.</li>
+    <li>Se indican visualmente las asíntotas verticales detectadas.</li>
+    <li>Se aproxima el rango con los valores de salida válidos.</li>
+  </ul>
 
   <script>
     function calcular() {
       const input = document.getElementById("funcion").value;
       const expr = math.parse(input);
       const f = expr.compile();
-      const xVals = [];
-      const yVals = [];
+
+      const xIntervalo = 0.1;
+      const xDesde = -100;
+      const xHasta = 100;
+
+      const segmentos = []; // para dividir en trazos continuos
+      let xSegmento = [];
+      let ySegmento = [];
+
+      let discontinuidades = [];
 
       let domMin = null;
       let domMax = null;
       let ranMin = null;
       let ranMax = null;
 
-      for (let x = -100; x <= 100; x += 0.1) {
+      for (let x = xDesde; x <= xHasta; x += xIntervalo) {
         try {
           const y = f.evaluate({ x: x });
-          if (typeof y === "number" && isFinite(y)) {
-            xVals.push(x);
-            yVals.push(y);
+          if (!isFinite(y) || Math.abs(y) > 1e6) throw 'infinito';
 
-            if (domMin === null || x < domMin) domMin = x;
-            if (domMax === null || x > domMax) domMax = x;
-            if (ranMin === null || y < ranMin) ranMin = y;
-            if (ranMax === null || y > ranMax) ranMax = y;
+          if (domMin === null || x < domMin) domMin = x;
+          if (domMax === null || x > domMax) domMax = x;
+          if (ranMin === null || y < ranMin) ranMin = y;
+          if (ranMax === null || y > ranMax) ranMax = y;
+
+          xSegmento.push(x);
+          ySegmento.push(y);
+        } catch {
+          if (xSegmento.length > 1) {
+            segmentos.push({ x: [...xSegmento], y: [...ySegmento] });
           }
-        } catch (e) {
-          // Ignorar puntos donde la función no está definida
+          discontinuidades.push(x.toFixed(2));
+          xSegmento = [];
+          ySegmento = [];
         }
       }
 
-      if (xVals.length === 0) {
-        document.getElementById("dominio").innerText = "No definido o no reconocible.";
-        document.getElementById("rango").innerText = "No definido o no reconocible.";
-        return;
+      if (xSegmento.length > 1) {
+        segmentos.push({ x: [...xSegmento], y: [...ySegmento] });
       }
 
       // Mostrar dominio y rango
-      document.getElementById("dominio").innerText = `Aproximadamente: [${domMin.toFixed(2)}, ${domMax.toFixed(2)}], excluyendo discontinuidades.`;
-      document.getElementById("rango").innerText = `Aproximadamente: [${ranMin.toFixed(2)}, ${ranMax.toFixed(2)}]`;
+      document.getElementById("dominio").innerText =
+        `Aproximadamente: [${domMin.toFixed(2)}, ${domMax.toFixed(2)}]` +
+        (discontinuidades.length ? ` con discontinuidades en x = ${discontinuidades.join(", ")}` : "");
 
-      // Graficar con Plotly
-      const trace = {
-        x: xVals,
-        y: yVals,
+      document.getElementById("rango").innerText =
+        `Aproximadamente: [${ranMin.toFixed(2)}, ${ranMax.toFixed(2)}]`;
+
+      // Preparar trazos de gráfica
+      const trazos = segmentos.map(seg => ({
+        x: seg.x,
+        y: seg.y,
         mode: 'lines',
-        type: 'scatter'
-      };
+        type: 'scatter',
+        line: { color: 'blue' }
+      }));
 
-      const layout = {
+      // Añadir asíntotas verticales detectadas
+      discontinuidades.forEach(xVal => {
+        trazos.push({
+          x: [xVal, xVal],
+          y: [ranMin - 1, ranMax + 1],
+          mode: 'lines',
+          line: { dash: 'dot', color: 'red' },
+          name: 'Asíntota vertical'
+        });
+      });
+
+      Plotly.newPlot('grafica', trazos, {
         title: 'Gráfica de la Función',
         xaxis: { title: 'x' },
-        yaxis: { title: 'f(x)', range: [ranMin - 1, ranMax + 1] }
-      };
-
-      Plotly.newPlot('grafica', [trace], layout);
+        yaxis: { title: 'f(x)', range: [ranMin - 1, ranMax + 1] },
+        showlegend: false
+      });
     }
   </script>
 </body>
