@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Calculadora de Dominio y Rango</title>
   <script src="https://cdn.jsdelivr.net/npm/mathjs@11.11.1/lib/browser/math.js"></script>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
   <h2>Calculadora de Dominio y Rango</h2>
@@ -15,39 +16,63 @@
   <p><strong>Dominio:</strong> <span id="dominio"></span></p>
   <p><strong>Rango:</strong> <span id="rango"></span></p>
 
+  <div id="grafica" style="width: 600px; height: 400px;"></div>
+
   <script>
     function calcular() {
       const input = document.getElementById("funcion").value;
       const expr = math.parse(input);
       const f = expr.compile();
-      let dominio = [];
-      let rango = [];
+      const xVals = [];
+      const yVals = [];
+
+      let domMin = null;
+      let domMax = null;
+      let ranMin = null;
+      let ranMax = null;
 
       for (let x = -100; x <= 100; x += 0.1) {
         try {
           const y = f.evaluate({ x: x });
           if (typeof y === "number" && isFinite(y)) {
-            dominio.push(x);
-            rango.push(y);
+            xVals.push(x);
+            yVals.push(y);
+
+            if (domMin === null || x < domMin) domMin = x;
+            if (domMax === null || x > domMax) domMax = x;
+            if (ranMin === null || y < ranMin) ranMin = y;
+            if (ranMax === null || y > ranMax) ranMax = y;
           }
         } catch (e) {
-          // valores que causan error no se incluyen en el dominio
+          // Ignorar puntos donde la función no está definida
         }
       }
 
-      if (dominio.length === 0) {
+      if (xVals.length === 0) {
         document.getElementById("dominio").innerText = "No definido o no reconocible.";
         document.getElementById("rango").innerText = "No definido o no reconocible.";
         return;
       }
 
-      const domMin = Math.min(...dominio).toFixed(2);
-      const domMax = Math.max(...dominio).toFixed(2);
-      const ranMin = Math.min(...rango).toFixed(2);
-      const ranMax = Math.max(...rango).toFixed(2);
+      // Mostrar dominio y rango
+      document.getElementById("dominio").innerText = `Aproximadamente: [${domMin.toFixed(2)}, ${domMax.toFixed(2)}], excluyendo discontinuidades.`;
+      document.getElementById("rango").innerText = `Aproximadamente: [${ranMin.toFixed(2)}, ${ranMax.toFixed(2)}]`;
 
-      document.getElementById("dominio").innerText = `Aproximadamente: [${domMin}, ${domMax}]`;
-      document.getElementById("rango").innerText = `Aproximadamente: [${ranMin}, ${ranMax}]`;
+      // Graficar con Plotly
+      const trace = {
+        x: xVals,
+        y: yVals,
+        mode: 'lines',
+        type: 'scatter'
+      };
+
+      const layout = {
+        title: 'Gráfica de la Función',
+        xaxis: { title: 'x' },
+        yaxis: { title: 'f(x)', range: [ranMin - 1, ranMax + 1] }
+      };
+
+      Plotly.newPlot('grafica', [trace], layout);
     }
   </script>
 </body>
